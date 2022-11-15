@@ -2,19 +2,19 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
-
-	"github.com/anksus/http-server/handlers"
 )
 
 func main() {
 	l := log.New(os.Stdout, "product-api ", log.LstdFlags)
-	hh := handlers.NewHello(l)
-	gh := handlers.NewGoodBye(l)
+	hh := NewHello(l)
+	gh := NewGoodBye(l)
 
 	sm := http.NewServeMux()
 	sm.Handle("/", hh)
@@ -41,4 +41,36 @@ func main() {
 	l.Println("Recieve terminate, graceful shutdown", sig)
 	tc, _ := context.WithTimeout(context.Background(), 30*time.Second)
 	s.Shutdown(tc)
+}
+
+
+
+type GoodBye struct {
+	l *log.Logger
+}
+
+func NewGoodBye(l *log.Logger) *GoodBye {
+	return &GoodBye{l}
+}
+
+func (g *GoodBye) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	rw.Write([]byte("byee"))
+}
+
+type Hello struct {
+	l *log.Logger
+}
+
+func NewHello(l *log.Logger) *Hello {
+	return &Hello{l}
+}
+
+func (h *Hello) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	h.l.Println("Hello world--")
+	d, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(rw, "Oops", http.StatusBadRequest)
+		return
+	}
+	fmt.Fprintf(rw, "Hello %s", d)
 }
